@@ -64,7 +64,6 @@ pub type Response {
     /// Count of active devices.
     active: Int,
     tpv: List(Tpv),
-    sky: List(dynamic.Dynamic),
   )
 
   OtherResponse(class: String)
@@ -81,9 +80,22 @@ pub fn response_decoder() -> decode.Decoder(Response) {
   |> decode.then(fn(class) {
     case class {
       "TPV" -> tpv_decoder() |> decode.map(TpvResponse)
+      "POLL" -> poll_decoder()
       _ -> decode.into(OtherResponse(class: class))
     }
   })
+}
+
+fn poll_decoder() -> decode.Decoder(Response) {
+  decode.into({
+    use time <- decode.parameter
+    use active <- decode.parameter
+    use tpv <- decode.parameter
+    PollResponse(time: time, active: active, tpv: tpv)
+  })
+  |> decode.field("time", decode.string)
+  |> decode.field("active", decode.int)
+  |> decode.field("tpv", decode.list(tpv_decoder()))
 }
 
 fn tpv_decoder() -> decode.Decoder(Tpv) {
