@@ -6,10 +6,9 @@
 //// basic parts of the API that I wanted for my project. Pull requests to add
 //// support for parts that you want are very welcome!
 
-import decode
-import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/json
-import gleam/option.{type Option}
+import gleam/option.{type Option, None}
 
 pub type Command {
   /// This command sets watcher mode.
@@ -69,66 +68,64 @@ pub type Response {
   OtherResponse(class: String)
 }
 
-pub fn decode_response(
-  data: dynamic.Dynamic,
-) -> Result(Response, List(dynamic.DecodeError)) {
-  decode.from(response_decoder(), data)
-}
-
 pub fn response_decoder() -> decode.Decoder(Response) {
   decode.at(["class"], decode.string)
   |> decode.then(fn(class) {
     case class {
       "TPV" -> tpv_decoder() |> decode.map(TpvResponse)
       "POLL" -> poll_decoder()
-      _ -> decode.into(OtherResponse(class: class))
+      _ -> decode.success(OtherResponse(class: class))
     }
   })
 }
 
 fn poll_decoder() -> decode.Decoder(Response) {
-  decode.into({
-    use time <- decode.parameter
-    use active <- decode.parameter
-    use tpv <- decode.parameter
-    PollResponse(time: time, active: active, tpv: tpv)
-  })
-  |> decode.field("time", decode.string)
-  |> decode.field("active", decode.int)
-  |> decode.field("tpv", decode.list(tpv_decoder()))
+  use time <- decode.field("time", decode.string)
+  use active <- decode.field("active", decode.int)
+  use tpv <- decode.field("tpv", decode.list(tpv_decoder()))
+  decode.success(PollResponse(time: time, active: active, tpv: tpv))
 }
 
 fn tpv_decoder() -> decode.Decoder(Tpv) {
-  decode.into({
-    use mode <- decode.parameter
-    use device <- decode.parameter
-    use time <- decode.parameter
-    use latitude <- decode.parameter
-    use longitude <- decode.parameter
-    Tpv(
-      mode: mode,
-      device: device,
-      time: time,
-      latitude: latitude,
-      longitude: longitude,
-    )
-  })
-  |> decode.field("mode", nmea_mode_decoder())
-  |> decode.field("device", decode.optional(decode.string))
-  |> decode.field("time", decode.optional(decode.string))
-  |> decode.field("lat", decode.optional(decode.float))
-  |> decode.field("lon", decode.optional(decode.float))
+  use mode <- decode.field("mode", nmea_mode_decoder())
+  use device <- decode.optional_field(
+    "device",
+    None,
+    decode.optional(decode.string),
+  )
+  use time <- decode.optional_field(
+    "time",
+    None,
+    decode.optional(decode.string),
+  )
+  use latitude <- decode.optional_field(
+    "lat",
+    None,
+    decode.optional(decode.float),
+  )
+  use longitude <- decode.optional_field(
+    "lon",
+    None,
+    decode.optional(decode.float),
+  )
+  decode.success(Tpv(
+    mode: mode,
+    device: device,
+    time: time,
+    latitude: latitude,
+    longitude: longitude,
+  ))
 }
 
 fn nmea_mode_decoder() -> decode.Decoder(NmeaMode) {
   decode.int
   |> decode.then(fn(i) {
     case i {
-      0 -> decode.into(UnknownNmeaMode)
-      1 -> decode.into(NoFixNmeaMode)
-      2 -> decode.into(TwoDimensionalNmeaMode)
-      3 -> decode.into(ThreeDimensionalNmeaMode)
-      _ -> decode.fail("NMEA Mode")
+      0 -> decode.success(UnknownNmeaMode)
+      1 -> decode.success(NoFixNmeaMode)
+      2 -> decode.success(TwoDimensionalNmeaMode)
+      3 -> decode.success(ThreeDimensionalNmeaMode)
+      _ -> decode.failure(UnknownNmeaMode, "NMEA Mode")
     }
   })
 }

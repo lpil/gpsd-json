@@ -40,7 +40,7 @@ pub fn decode_response_tpv_0_test() {
     \"eph\":36.000,\"epv\":32.321,
     \"track\":10.3788,\"speed\":0.091,\"climb\":-0.085,\"mode\":3}
   "
-  |> json.decode(gpsd_json.decode_response)
+  |> json.parse(gpsd_json.response_decoder())
   |> should.be_ok
   |> should.equal(
     TpvResponse(Tpv(
@@ -60,7 +60,7 @@ pub fn decode_response_tpv_1_test() {
     \"eph\":36.000,\"epv\":32.321,
     \"track\":10.3788,\"speed\":0.091,\"climb\":-0.085,\"mode\":3}
   "
-  |> json.decode(gpsd_json.decode_response)
+  |> json.parse(gpsd_json.response_decoder())
   |> should.be_ok
   |> should.equal(
     TpvResponse(Tpv(
@@ -77,7 +77,7 @@ pub fn decode_response_tpv_2_test() {
   "
   {\"class\":\"TPV\",\"mode\":1}
   "
-  |> json.decode(gpsd_json.decode_response)
+  |> json.parse(gpsd_json.response_decoder())
   |> should.be_ok
   |> should.equal(
     TpvResponse(Tpv(
@@ -110,7 +110,7 @@ pub fn decode_response_poll_0_test() {
                             {\"PRN\":31,\"el\":16,\"az\":102,\"ss\":0,\"used\":false}
   ]}]}
   "
-  |> json.decode(gpsd_json.decode_response)
+  |> json.parse(gpsd_json.response_decoder())
   |> should.be_ok
   |> should.equal(
     PollResponse(time: "2010-06-04T10:31:00.289Z", active: 1, tpv: [
